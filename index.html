@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Blood Donation Registry</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.6.1/dist/web3.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        margin: 50px;
+      }
+      input,
+      button {
+        padding: 10px;
+        margin: 10px;
+        width: 80%;
+        max-width: 400px;
+      }
+      #donorInfo {
+        margin-top: 20px;
+        text-align: left;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Blood Donation Registry</h1>
+
+    <!-- MetaMask connection -->
+    <div>
+      <button id="connectButton">Connect MetaMask</button>
+      <p id="account"></p>
+    </div>
+
+    <h3>Register as a Blood Donor</h3>
+    <input type="text" id="donorName" placeholder="Enter your name" /><br />
+    <select id="bloodGroup">
+      <option value="1">A+</option>
+      <option value="2">B+</option>
+      <option value="3">O+</option>
+      <option value="4">AB+</option>
+      <option value="5">A-</option>
+      <option value="6">B-</option>
+      <option value="7">O-</option>
+      <option value="8">AB-</option></select
+    ><br />
+    <button id="registerButton">Register as Donor</button>
+
+    <h3>Request Blood</h3>
+    <select id="bloodRequest">
+      <option value="1">A+</option>
+      <option value="2">B+</option>
+      <option value="3">O+</option>
+      <option value="4">AB+</option>
+      <option value="5">A-</option>
+      <option value="6">B-</option>
+      <option value="7">O-</option>
+      <option value="8">AB-</option></select
+    ><br />
+    <button id="requestButton">Request Blood</button>
+
+    <div id="donorInfo"></div>
+
+    <script>
+      let web3;
+      let contract;
+      let account;
+
+      const contractABI = [
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "address",
+              name: "requester",
+              type: "address",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "bloodGroup",
+              type: "uint256",
+            },
+          ],
+          name: "BloodRequested",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "address",
+              name: "donor",
+              type: "address",
+            },
+            {
+              indexed: false,
+              internalType: "string",
+              name: "name",
+              type: "string",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "bloodGroup",
+              type: "uint256",
+            },
+          ],
+          name: "DonorRegistered",
+          type: "event",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "",
+              type: "address",
+            },
+          ],
+          name: "donors",
+          outputs: [
+            {
+              internalType: "string",
+              name: "name",
+              type: "string",
+            },
+            {
+              internalType: "uint256",
+              name: "lastDonationDate",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "bloodGroup",
+              type: "uint256",
+            },
+            {
+              internalType: "bool",
+              name: "isRegistered",
+              type: "bool",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "string",
+              name: "name",
+              type: "string",
+            },
+            {
+              internalType: "uint256",
+              name: "bloodGroup",
+              type: "uint256",
+            },
+          ],
+          name: "registerBloodDonor",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "bloodGroup",
+              type: "uint256",
+            },
+          ],
+          name: "requestBlood",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+      ];
+      const contractAddress = "0xcFD5865e2eC3A8294Ea13c6490bd2d109cd91067";
+
+      // Initialize Web3 and contract
+      window.addEventListener("load", async () => {
+        if (window.ethereum) {
+          web3 = new Web3(window.ethereum);
+          try {
+            await ethereum.request({ method: "eth_requestAccounts" });
+            account = (await web3.eth.getAccounts())[0];
+            document.getElementById(
+              "account"
+            ).innerText = `Connected Account: ${account}`;
+            contract = new web3.eth.Contract(contractABI, contractAddress);
+          } catch (error) {
+            console.error("Error connecting MetaMask:", error);
+          }
+        } else {
+          alert("Please install MetaMask to use this feature.");
+        }
+      });
+
+      // Register as a blood donor
+      document
+        .getElementById("registerButton")
+        .addEventListener("click", async () => {
+          const name = document.getElementById("donorName").value;
+          const bloodGroup = parseInt(
+            document.getElementById("bloodGroup").value
+          );
+          if (!name || !bloodGroup) {
+            alert("Please fill in all fields.");
+            return;
+          }
+          try {
+            await contract.methods
+              .registerBloodDonor(name, bloodGroup)
+              .send({ from: account });
+            alert("You have been successfully registered as a blood donor!");
+          } catch (error) {
+            console.error("Error registering as donor:", error);
+          }
+        });
+
+      // Request blood by blood group
+      document
+        .getElementById("requestButton")
+        .addEventListener("click", async () => {
+          const bloodGroup = parseInt(
+            document.getElementById("bloodRequest").value
+          );
+          try {
+            await contract.methods
+              .requestBlood(bloodGroup)
+              .send({ from: account });
+            alert("Blood request has been sent!");
+          } catch (error) {
+            console.error("Error making blood request:", error);
+          }
+        });
+
+      // Listen for DonorRegistered events
+      contract.events.DonorRegistered(
+        { fromBlock: "latest" },
+        (error, event) => {
+          if (error) {
+            console.error("Error listening to DonorRegistered event:", error);
+          } else {
+            console.log("New donor registered:", event.returnValues);
+            displayDonorInfo(event.returnValues);
+          }
+        }
+      );
+
+      // Display donor information
+      function displayDonorInfo(event) {
+        const donorInfoDiv = document.getElementById("donorInfo");
+        donorInfoDiv.innerHTML = `
+        <h3>Donor Registered</h3>
+        <p><strong>Name:</strong> ${event.name}</p>
+        <p><strong>Blood Group:</strong> ${getBloodGroupName(
+          event.bloodGroup
+        )}</p>
+      `;
+      }
+
+      // Helper function to get blood group name
+      function getBloodGroupName(groupNumber) {
+        const bloodGroups = {
+          1: "A+",
+          2: "B+",
+          3: "O+",
+          4: "AB+",
+          5: "A-",
+          6: "B-",
+          7: "O-",
+          8: "AB-",
+        };
+        return bloodGroups[groupNumber] || "Unknown";
+      }
+    </script>
+  </body>
+</html>
